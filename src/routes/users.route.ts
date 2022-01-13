@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import userRepository from 'repositories/user.repository';
 
 const usersRoute = Router();
 
@@ -9,30 +10,60 @@ interface IUser {
   password: string;
 }
 
-usersRoute.get('/users', (req: Request, res: Response, next: NextFunction) => {
-  const users = [{ username: 'wsasouza' }];
-  res.status(StatusCodes.OK).send(users);
+usersRoute.get('/users', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const users = await userRepository.findAll();
+    res.status(StatusCodes.OK).send(users);
+  } catch(error) {
+      next(error);
+  }
 });
 
-usersRoute.get('/users/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
-  const id = req.params.id;
-  res.status(StatusCodes.OK).send({ id });
+usersRoute.get('/users/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    const user = await userRepository.findById(id);
+    res.status(StatusCodes.OK).send(user);
+  } catch(error) {
+      next(error);
+  }
 });
 
-usersRoute.post('/users', (req: Request, res: Response, next: NextFunction) => {
-  const newUser = req.body;
-  console.log(req.body);
-  res.status(StatusCodes.CREATED).send(newUser);
+usersRoute.post('/users', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.body;
+    const newUser = await userRepository.createUser(user);
+    res.status(StatusCodes.CREATED).send(newUser);
+  } catch(error) {
+      next(error);
+  }
 });
 
-usersRoute.put('/users/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
-  const id = req.params.id;
-  res.status(StatusCodes.OK).send({ id });
+usersRoute.put('/users/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    const modifiedUser = req.body;
+
+    modifiedUser.id = id;
+
+    await userRepository.updateUser(modifiedUser);
+
+    res.status(StatusCodes.OK).send();
+  } catch(error) {
+      next(error);
+  }
 });
 
-usersRoute.delete('/users/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
-  const id = req.params.id;
-  res.status(StatusCodes.OK).send({ id });
+usersRoute.delete('/users/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+
+    await userRepository.removeUser(id);
+
+    res.status(StatusCodes.NO_CONTENT).send();
+  } catch(error) {
+      next(error);
+  }
 });
 
 export default usersRoute;
