@@ -1,9 +1,28 @@
 import db from '../db';
 import User from 'models/user.model';
 import DatabaseError from 'models/errors/database.error.model';
+import ForbiddenError from 'models/errors/forbidden.error.model';
 
 
 class UserRepository {  
+
+    async auth(username: string, password: string): Promise<User | null> {
+    const secret = process.env.SECRET; 
+
+    try {
+      const query = `SELECT id, username FROM application_user
+                     WHERE username = $1
+                     AND password = crypt($2, '${secret}')`
+      const values = [username, password];
+      const { rows } = await db.query<User>(query, values);  
+      const [ user ] = rows;  
+
+      return user || null;
+
+    } catch(error) {
+        throw new DatabaseError('Erro ao buscar os registros no banco.', error)
+    }
+  }
 
   async findAll(): Promise<User[]> {
     try {
@@ -13,7 +32,7 @@ class UserRepository {
   
       return rows || [];
     } catch(error) {
-      throw new DatabaseError('Erro ao buscar os registros no banco.', error)
+        throw new DatabaseError('Erro ao buscar os registros no banco.', error)
     }
   }
 
@@ -29,14 +48,15 @@ class UserRepository {
       return user;
 
     } catch(error) {
-      throw new DatabaseError(`Erro na busca por ${id}`, error)
+        throw new DatabaseError(`Erro na busca por ${id}`, error)
     }
    
   }
 
   async createUser(user: User): Promise<User> {
     try {
-      const secret = process.env.SECRET;    
+      const secret = process.env.SECRET;
+      
       const script = `INSERT INTO application_user (
                         username,
                         password
@@ -56,7 +76,11 @@ class UserRepository {
 
   async updateUser(user: User): Promise<void> {
     try {
-      const secret = process.env.SECRET;    
+      const secret = process.env.SECRET;
+      
+      if(!secret) 
+        throw new ForbiddenError('Falha na autenticação');
+
       const script = `UPDATE application_user 
                       SET 
                         username = $1,
